@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ITSS 451: THE LAB</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    background: #0a0e14;
+    color: #b3f0c2;
+    font-family: 'Courier New', 'Consolas', monospace;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(transparent 50%, rgba(0, 255, 100, 0.025) 50%);
+    background-size: 100% 3px;
+    pointer-events: none;
+    z-index: 100;
+  }
+  
+  .container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .header {
+    border: 1px solid #4ade80;
+    padding: 8px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(74, 222, 128, 0.05);
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+  }
+  
+  .title {
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #4ade80;
+    text-shadow: 0 0 8px #4ade80;
+  }
+  
+  .stats { display: flex; gap: 18px; flex-wrap: wrap; font-size: 11px; }
+  .stat { display: flex; align-items: center; gap: 5px; }
+  .stat-label { color: #6b7280; }
+  .stat-value { color: #4ade80; font-weight: bold; }
+  
+  .phase-badge {
+    background: #4ade80;
+    color: #0a0e14;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: bold;
+    font-size: 10px;
+  }
+  
+  .main { flex: 1; display: flex; gap: 8px; overflow: hidden; }
+  
+  .terminal-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  
+  .terminal {
+    flex: 1;
+    border: 1px solid #4ade80;
+    padding: 12px;
+    overflow-y: auto;
+    background: rgba(0, 20, 5, 0.4);
+    font-size: 13px;
+    line-height: 1.45;
+    box-shadow: inset 0 0 25px rgba(74, 222, 128, 0.08);
+  }
+  
+  .sidebar {
+    width: 280px;
+    border: 1px solid #4ade80;
+    padding: 12px;
+    overflow-y: auto;
+    background: rgba(0, 20, 5, 0.4);
+    font-size: 11px;
+  }
+  
+  .sidebar h3 {
+    color: #fbbf24;
+    font-size: 12px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #374151;
+    padding-bottom: 4px;
+  }
+  
+  .objective {
+    margin: 4px 0;
+    padding: 4px 6px;
+    border-left: 2px solid #374151;
+    color: #9ca3af;
+    transition: all 0.3s;
+  }
+  
+  .objective.done { border-left-color: #4ade80; color: #4ade80; text-decoration: line-through; opacity: 0.7; }
+  .objective.active { border-left-color: #fbbf24; color: #fbbf24; background: rgba(251, 191, 36, 0.05); }
+  
+  .terminal::-webkit-scrollbar, .sidebar::-webkit-scrollbar { width: 6px; }
+  .terminal::-webkit-scrollbar-track, .sidebar::-webkit-scrollbar-track { background: #001a0a; }
+  .terminal::-webkit-scrollbar-thumb, .sidebar::-webkit-scrollbar-thumb { background: #4ade80; }
+  
+  .input-line {
+    display: flex;
+    align-items: center;
+    margin-top: 8px;
+    border: 1px solid #4ade80;
+    padding: 8px 12px;
+    background: rgba(74, 222, 128, 0.05);
+  }
+  
+  .prompt { color: #4ade80; margin-right: 8px; font-weight: bold; white-space: nowrap; }
+  
+  .input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #b3f0c2;
+    font-family: inherit;
+    font-size: 13px;
+    caret-color: #4ade80;
+  }
+  
+  .line { margin-bottom: 2px; word-wrap: break-word; }
+  .line.system { color: #b3f0c2; }
+  .line.error { color: #ef4444; }
+  .line.warning { color: #fbbf24; }
+  .line.success { color: #4ade80; }
+  .line.info { color: #60a5fa; }
+  .line.user { color: #fff; }
+  .line.dim { color: #6b7280; font-size: 11px; }
+  .line.story { color: #c4b5fd; font-style: italic; border-left: 2px solid #8b5cf6; padding-left: 10px; margin: 6px 0; }
+  .line.banner { color: #4ade80; white-space: pre; font-size: 10px; line-height: 1.1; text-shadow: 0 0 6px #4ade80; }
+  .line.attack { color: #f87171; }
+  .line.shell { color: #fbbf24; background: rgba(251, 191, 36, 0.05); padding: 1px 4px; }
+  .line.hadia { color: #34d399; font-style: italic; }
+  .line.welcome { color: #fbbf24; font-weight: bold; }
+  .line.toast {
+    color: #4ade80;
+    background: rgba(74, 222, 128, 0.1);
+    padding: 6px 10px;
+    border: 1px solid #4ade80;
+    margin: 6px 0;
+    font-weight: bold;
+  }
+  
+  .progress-bar {
+    height: 6px;
+    background: #1f2937;
+    border: 1px solid #374151;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4ade80, #22c55e);
+    width: 0%;
+    transition: width 0.5s;
+  }
+  
+  .notes-section {
+    margin-top: 12px;
+    padding: 8px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px dashed #6366f1;
+    border-radius: 4px;
+  }
+  .notes-section h3 { color: #a5b4fc; }
+  .notes-content {
+    color: #c7d2fe;
+    line-height: 1.5;
+    font-style: italic;
+    font-size: 10.5px;
+  }
+  .notes-content strong { color: #fff; font-style: normal; }
+  
+  .mqtt-viz {
+    border: 1px solid #fbbf24;
+    background: rgba(251, 191, 36, 0.05);
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+  .mqtt-viz-title {
+    color: #fbbf24;
+    font-weight: bold;
+    margin-bottom: 8px;
+    text-align: center;
+    font-size: 12px;
+  }
+  .mqtt-flow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .mqtt-node {
+    border: 1px solid #4ade80;
+    padding: 6px 10px;
+    background: rgba(74, 222, 128, 0.1);
+    color: #4ade80;
+    font-size: 11px;
+    text-align: center;
+    min-width: 100px;
+  }
+  .mqtt-node.attacker {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+  }
+  .mqtt-node.broker {
+    border-color: #fbbf24;
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+  }
+  .mqtt-arrow { color: #fbbf24; font-size: 16px; animation: pulse 1.5s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+  .mqtt-packet {
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 3px solid #ef4444;
+    padding: 4px 8px;
+    margin: 4px 0;
+    font-size: 11px;
+    color: #fca5a5;
+  }
+  
+  .nodered-frame {
+    border: 1px solid #dc2626;
+    background: #1f2937;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 4px;
+    font-family: 'Segoe UI', sans-serif;
+  }
+  .nodered-header {
+    background: #dc2626;
+    color: white;
+    padding: 6px 10px;
+    margin: -12px -12px 10px -12px;
+    font-weight: bold;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .nodered-flow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .node-block {
+    background: #fff;
+    border: 1px solid #9ca3af;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 11px;
+    color: #374151;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .node-block.input { background: #fde68a; }
+  .node-block.func { background: #fecaca; }
+  .node-block.debug { background: #bbf7d0; }
+  .node-arrow { color: #6b7280; font-size: 14px; }
+  .nodered-warning {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 6px 10px;
+    margin-top: 8px;
+    border-radius: 3px;
+    font-size: 11px;
+  }
+  .nodered-locked {
+    background: #fef3c7;
+    color: #78350f;
+    padding: 8px 10px;
+    margin-top: 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    text-align: center;
+    border: 2px solid #fbbf24;
+  }
+  
+  @media (max-width: 700px) {
+    .sidebar { display: none; }
+    .title { font-size: 13px; }
+    .stats { font-size: 10px; gap: 10px; }
+    .terminal { font-size: 12px; }
+    .line.banner { font-size: 6px; }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title">⚡ ITSS 451: THE LAB</div>
+      <div class="stats">
+        <div class="stat"><span class="stat-label">STUDENT:</span><span class="stat-value">HADIA #3643</span></div>
+        <div class="stat"><span class="stat-label">PHASE:</span><span class="phase-badge" id="phaseBadge">RECON</span></div>
+        <div class="stat"><span class="stat-label">XP:</span><span class="stat-value" id="xp">0</span></div>
+        <div class="stat"><span class="stat-label">GRADE:</span><span class="stat-value" id="grade">--</span></div>
+      </div>
+    </div>
+    
+    <div class="main">
+      <div class="terminal-wrap">
+        <div class="terminal" id="terminal"></div>
+        <div class="input-line">
+          <span class="prompt" id="promptText">had@vbox:~$</span>
+          <input type="text" class="input" id="input" autocomplete="off" autofocus spellcheck="false">
+        </div>
+      </div>
+      
+      <div class="sidebar">
+        <h3>📋 MISSION OBJECTIVES</h3>
+        <div id="objectives"></div>
+        <h3 style="margin-top: 12px;">📊 PROGRESS</h3>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <div style="text-align: center; margin-top: 4px; color: #4ade80;" id="progressText">0 / 14</div>
+        <h3 style="margin-top: 12px;">💡 NEXT STEP</h3>
+        <div id="hint" style="color: #9ca3af; font-style: italic;">Type <span style="color: #4ade80;">help</span> to begin.</div>
+        
+        <div class="notes-section">
+          <h3>🎤 PRESENTATION NOTES</h3>
+          <div class="notes-content" id="notes">
+            <strong>Welcome slide:</strong> Greet Dr. Fachkha, introduce yourself, and frame the project as a hands-on pentest of an IoT-enabled VM covering both offensive and defensive techniques.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const terminal = document.getElementById('terminal');
+  const input = document.getElementById('input');
+  const objectivesEl = document.getElementById('objectives');
+  const xpEl = document.getElementById('xp');
+  const gradeEl = document.getElementById('grade');
+  const phaseBadge = document.getElementById('phaseBadge');
+  const progressFill = document.getElementById('progressFill');
+  const progressText = document.getElementById('progressText');
+  const promptText = document.getElementById('promptText');
+  const hintEl = document.getElementById('hint');
+  const notesEl = document.getElementById('notes');
+  
+  const state = {
+    phase: 1,
+    xp: 0,
+    busy: false,
+    inMsf: false,
+    inShell: false,
+    msfModule: null,
+    msfRhost: null,
+    completed: new Set(),
+    ufwBlocked: new Set(),
+    ufwEnabled: false,
+    nodeRedAuthEnabled: false
+  };
+  
+  const objectives = [
+    { id: 'ping', phase: 1, label: 'Confirm connectivity to target', xp: 5, hint: 'Try: ping 192.168.56.101 -c 4',
+      notes: '<strong>Slide 3.1 — Connectivity Test:</strong> "Before scanning, I verified both VMs could communicate using a simple ICMP ping. Zero packet loss confirmed the host-only network was set up correctly."' },
+    { id: 'netdiscover', phase: 1, label: 'Discover live hosts on subnet', xp: 10, hint: 'Try: sudo netdiscover -r 192.168.56.0/24',
+      notes: '<strong>Slide 3.2 — Host Discovery:</strong> "Netdiscover sends ARP requests across the subnet to identify live devices. In a real engagement we don\'t know the target IP ahead of time."' },
+    { id: 'nmap', phase: 1, label: 'Run Nmap service scan', xp: 15, hint: 'Try: sudo nmap -sV -sC -O 192.168.56.101',
+      notes: '<strong>Slide 3.3 — Nmap Service Scan:</strong> "Flags used: -sV for service version, -sC for default scripts, -O for OS detection. Revealed 12+ open ports including Telnet, Samba, MySQL, MQTT, and Node-RED."' },
+    { id: 'vuln', phase: 1, label: 'Run vulnerability scan', xp: 15, hint: 'Try: sudo nmap --script vuln 192.168.56.101',
+      notes: '<strong>Slide 3.4 — Vulnerability Scan:</strong> "The --script vuln option runs Nmap NSE vulnerability scripts. Found vsftpd backdoor, Samba usermap_script, and POODLE SSL — all critical."' },
+    { id: 'msfconsole', phase: 2, label: 'Launch Metasploit', xp: 10, hint: 'Try: msfconsole',
+      notes: '<strong>Slide 4.1 — Metasploit:</strong> "Metasploit is an exploitation framework with thousands of pre-built exploits. I picked Samba usermap_script (CVE-2007-2447) for reliability and demonstration value."' },
+    { id: 'exploit', phase: 2, label: 'Run the Samba exploit', xp: 25, hint: 'In msf: use exploit/multi/samba/usermap_script, set RHOSTS, run',
+      notes: '<strong>Slide 4.1 — Exploitation:</strong> "Samba usernames containing shell metacharacters get executed as commands. Within seconds, I had a shell on the target. This is why patching matters — this CVE is from 2007."' },
+    { id: 'rootcheck', phase: 2, label: 'Confirm root access', xp: 10, hint: 'In shell: whoami',
+      notes: '<strong>Slide 4.1 — Privilege Verification:</strong> "whoami returned root — full administrator access. From here I could read /etc/shadow, install backdoors, or pivot."' },
+    { id: 'mqttsub', phase: 3, label: 'Sniff MQTT traffic', xp: 15, hint: 'Try: mosquitto_sub -h localhost -t "#" -v',
+      notes: '<strong>Slide 4.2 — MQTT Sniffing:</strong> "MQTT is the dominant IoT messaging protocol. The wildcard topic # subscribes to ALL topics. Without auth, anyone sees every sensor reading and command."' },
+    { id: 'mqttpub', phase: 3, label: 'Inject fake IoT command', xp: 15, hint: 'Try: mosquitto_pub -h localhost -t "iot/camera/feed" -m "..."',
+      notes: '<strong>Slide 4.2 — MQTT Injection:</strong> "I published a fake command. In a real environment this could disable cameras, unlock smart locks, or shut down medical IoT devices."' },
+    { id: 'nodered', phase: 3, label: 'Access Node-RED dashboard', xp: 15, hint: 'Try: open-nodered',
+      notes: '<strong>Slide 4.3 — Node-RED Dashboard:</strong> "Node-RED runs on port 1880 with NO authentication by default. An attacker can open it in a browser, modify flows, or delete automations."' },
+    { id: 'suricata', phase: 4, label: 'Deploy Suricata IDS', xp: 15, hint: 'Try: sudo suricata -i eth0 -l /var/log/suricata/',
+      notes: '<strong>Slide 5.1 — Suricata IDS:</strong> "Suricata inspects network traffic against rule sets. After deployment, the same Nmap scans that were silent before now generate ET SCAN alerts."' },
+    { id: 'mqttauth', phase: 4, label: 'Add MQTT authentication', xp: 15, hint: 'Try: sudo mosquitto_passwd -c /etc/mosquitto/passwd student',
+      notes: '<strong>Slide 5.2 — MQTT Authentication:</strong> "I created a password file with mosquitto_passwd, then disabled allow_anonymous. After restart, any unauthorized connection is refused."' },
+    { id: 'ufw', phase: 4, label: 'Block ports with UFW', xp: 15, hint: 'Try: sudo ufw enable, then deny 445, then deny 1883',
+      notes: '<strong>Slide 5.3 — UFW Firewall:</strong> "Even if a service is misconfigured, a firewall blocks the connection at the network layer. Defense in depth — multiple controls so a single failure does not cause compromise."' },
+    { id: 'noderedauth', phase: 4, label: 'Secure Node-RED with auth', xp: 15, hint: 'Try: nodered-secure',
+      notes: '<strong>Slide 5.4 — Securing Node-RED:</strong> "I edited settings.js to enable adminAuth with a bcrypt-hashed password. Now the editor requires login before flows can be viewed or modified."' }
+  ];
+  
+  const phaseNames = { 1: 'RECON', 2: 'EXPLOIT', 3: 'IoT ATTACK', 4: 'DEFENSE', 5: 'COMPLETE' };
+  const phaseColors = { 1: '#60a5fa', 2: '#f87171', 3: '#fbbf24', 4: '#4ade80', 5: '#ec4899' };
+  
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  function scrollDown() { terminal.scrollTop = terminal.scrollHeight; }
+  
+  async function typeLine(text, cls, delay) {
+    if (!cls) cls = 'system';
+    if (delay === undefined) delay = 8;
+    const line = document.createElement('div');
+    line.className = 'line ' + cls;
+    terminal.appendChild(line);
+    for (let i = 0; i < text.length; i++) {
+      line.textContent += text[i];
+      scrollDown();
+      if (delay > 0) await sleep(delay);
+    }
+  }
+  
+  function instantLine(text, cls) {
+    if (!cls) cls = 'system';
+    const line = document.createElement('div');
+    line.className = 'line ' + cls;
+    line.textContent = text;
+    terminal.appendChild(line);
+    scrollDown();
+  }
+  
+  function appendHTML(html) {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = html;
+    terminal.appendChild(wrap);
+    scrollDown();
+  }
+  
+  function blank() { instantLine(''); }
+  
+  function complete(id) {
+    if (state.completed.has(id)) return;
+    const obj = objectives.find(o => o.id === id);
+    if (!obj) return;
+    state.completed.add(id);
+    state.xp += obj.xp;
+    xpEl.textContent = state.xp;
+    instantLine('✓ OBJECTIVE COMPLETE: ' + obj.label + ' (+' + obj.xp + ' XP)', 'toast');
+    updateObjectives();
+    updateGrade();
+    checkPhaseComplete();
+  }
+  
+  function updateGrade() {
+    const total = objectives.reduce(function(s, o) { return s + o.xp; }, 0);
+    const pct = (state.xp / total) * 100;
+    let g = '--';
+    if (pct >= 95) g = 'A+';
+    else if (pct >= 85) g = 'A';
+    else if (pct >= 75) g = 'B';
+    else if (pct >= 60) g = 'C';
+    else if (pct >= 40) g = 'D';
+    else if (pct > 0) g = 'F';
+    gradeEl.textContent = g;
+    progressFill.style.width = (state.completed.size / objectives.length * 100) + '%';
+    progressText.textContent = state.completed.size + ' / ' + objectives.length;
+  }
+  
+  function updateObjectives() {
+    objectivesEl.innerHTML = '';
+    const phaseObjs = objectives.filter(function(o) { return o.phase === state.phase; });
+    const nextActive = phaseObjs.find(function(o) { return !state.completed.has(o.id); });
+    
+    objectives.forEach(function(o) {
+      const div = document.createElement('div');
+      div.className = 'objective';
+      if (state.completed.has(o.id)) div.className += ' done';
+      else if (o === nextActive) div.className += ' active';
+      div.textContent = (state.completed.has(o.id) ? '✓ ' : '○ ') + o.label;
+      objectivesEl.appendChild(div);
+    });
+    
+    if (nextActive) {
+      hintEl.innerHTML = '<span style="color: #fbbf24;">' + nextActive.hint + '</span>';
+      notesEl.innerHTML = nextActive.notes;
+    } else {
+      hintEl.textContent = 'Phase complete! Moving on...';
+    }
+  }
+  
+  function checkPhaseComplete() {
+    const phaseObjs = objectives.filter(function(o) { return o.phase === state.phase; });
+    const allDone = phaseObjs.every(function(o) { return state.completed.has(o.id); });
+    if (allDone && state.phase < 5) {
+      setTimeout(function() { advancePhase(); }, 1200);
+    }
+  }
+  
+  async function advancePhase() {
+    state.phase++;
+    phaseBadge.textContent = phaseNames[state.phase];
+    phaseBadge.style.background = phaseColors[state.phase];
+    
+    blank();
+    instantLine('═══════════════════════════════════════════════════', 'success');
+    
+    if (state.phase === 2) {
+      await typeLine('▼ PHASE 2 UNLOCKED: EXPLOITATION', 'success', 20);
+      instantLine('═══════════════════════════════════════════════════', 'success');
+      blank();
+      await typeLine('Hadia: "Alright Dr. Fachkha, recon is done — now the fun part begins."', 'hadia', 18);
+      await typeLine('       "I picked the Samba usermap_script vulnerability because, honestly,"', 'hadia', 18);
+      await typeLine('       "it has a 100% success rate on Metasploitable 2 and the impact is dramatic."', 'hadia', 18);
+      await typeLine('       "Let me fire up Metasploit and show you what I mean..."', 'hadia', 18);
+      blank();
+      instantLine('💡 Launch Metasploit with: msfconsole', 'info');
+    } else if (state.phase === 3) {
+      await typeLine('▼ PHASE 3 UNLOCKED: IoT ATTACK', 'success', 20);
+      instantLine('═══════════════════════════════════════════════════', 'success');
+      blank();
+      await typeLine('Hadia: "Okay so getting root was satisfying, but here is what really concerned me..."', 'hadia', 18);
+      await typeLine('       "IoT devices. They are everywhere now — cameras, locks, sensors —"', 'hadia', 18);
+      await typeLine('       "and most of them ship with zero authentication out of the box."', 'hadia', 18);
+      await typeLine('       "Let me show you exactly how scary that is."', 'hadia', 18);
+      blank();
+      instantLine('💡 Three IoT objectives: sniff MQTT, inject commands, access Node-RED.', 'info');
+    } else if (state.phase === 4) {
+      await typeLine('▼ PHASE 4 UNLOCKED: DEFENSIVE SECURITY', 'success', 20);
+      instantLine('═══════════════════════════════════════════════════', 'success');
+      blank();
+      await typeLine('Hadia: "Okay Dr. Fachkha, I know what you are thinking —"', 'hadia', 18);
+      await typeLine('       "all I have done so far is break things. But here is the thing:"', 'hadia', 18);
+      await typeLine('       "you cannot defend what you do not understand."', 'hadia', 18);
+      await typeLine('       "Now let me put on my blue team hat and lock this network down."', 'hadia', 18);
+      blank();
+      instantLine('💡 Four defensive controls coming up: IDS, MQTT auth, firewall, Node-RED auth.', 'info');
+    } else if (state.phase === 5) {
+      await finalGrade();
+      return;
+    }
+    updateObjectives();
+  }
+  
+  async function finalGrade() {
+    blank();
+    instantLine('═══════════════════════════════════════════════════', 'success');
+    await typeLine('  ▶ COMPILING FINAL REPORT...', 'info', 25);
+    await sleep(400);
+    await typeLine('  ▶ Verifying objectives... [████████████] 14/14 ✓', 'success', 15);
+    await sleep(300);
+    await typeLine('  ▶ Generating certificate...', 'info', 20);
+    await sleep(500);
+    blank();
+    
+    instantLine('🏆 ACHIEVEMENTS UNLOCKED:', 'toast');
+    await sleep(300);
+    await typeLine('   🥇 "First Blood" — Got initial root access', 'success', 8);
+    await sleep(200);
+    await typeLine('   🔍 "Eagle Eye" — Discovered all 12+ open services', 'success', 8);
+    await sleep(200);
+    await typeLine('   📡 "Signal Hunter" — Intercepted MQTT in plaintext', 'success', 8);
+    await sleep(200);
+    await typeLine('   🛡️ "Wall Builder" — Deployed all 4 defensive controls', 'success', 8);
+    await sleep(200);
+    await typeLine('   🎓 "The Full Stack" — Both attacker AND defender', 'success', 8);
+    await sleep(200);
+    await typeLine('   ⭐ "Top of the Class" — Perfect score', 'success', 8);
+    blank();
+    await sleep(800);
+    
+    appendHTML(
+      '<div style="border: 3px double #fbbf24; padding: 20px; margin: 12px 0; background: linear-gradient(135deg, rgba(251,191,36,0.05), rgba(74,222,128,0.05)); text-align: center; font-family: Times New Roman, serif;">' +
+        '<div style="font-size: 11px; color: #fbbf24; letter-spacing: 4px;">━━━━━━━━ ✦ ━━━━━━━━</div>' +
+        '<div style="color: #fbbf24; font-size: 14px; margin: 8px 0; letter-spacing: 2px;">CERTIFICATE OF COMPLETION</div>' +
+        '<div style="font-size: 10px; color: #9ca3af;">College of Engineering and Information Technology</div>' +
+        '<div style="font-size: 11px; color: #fbbf24; letter-spacing: 4px; margin-bottom: 12px;">━━━━━━━━ ✦ ━━━━━━━━</div>' +
+        '<div style="font-size: 10px; color: #c7d2fe; font-style: italic;">This is to certify that</div>' +
+        '<div style="font-size: 20px; color: #4ade80; margin: 8px 0; font-weight: bold; text-shadow: 0 0 10px rgba(74,222,128,0.5);">HADIA RAHMANI</div>' +
+        '<div style="font-size: 9px; color: #9ca3af;">Student ID #3643</div>' +
+        '<div style="font-size: 10px; color: #c7d2fe; font-style: italic; margin-top: 8px;">has successfully completed</div>' +
+        '<div style="font-size: 13px; color: #fff; margin: 8px 0; font-weight: bold;">ITSS 451 — Ethical Hacking and Network Defense</div>' +
+        '<div style="font-size: 10px; color: #c7d2fe;">Final Project: Attacking and Securing an IoT Network</div>' +
+        '<div style="margin-top: 14px; display: flex; justify-content: space-around; font-size: 10px; color: #9ca3af;">' +
+          '<div><div style="border-bottom: 1px solid #4ade80; padding: 0 20px 2px;">Spring 2026</div><div style="font-size: 8px; margin-top: 2px;">SEMESTER</div></div>' +
+          '<div><div style="border-bottom: 1px solid #4ade80; padding: 0 20px 2px; color: #4ade80; font-weight:bold;">' + gradeEl.textContent + '</div><div style="font-size: 8px; margin-top: 2px;">FINAL GRADE</div></div>' +
+          '<div><div style="border-bottom: 1px solid #4ade80; padding: 0 20px 2px; font-style: italic; font-family: Brush Script MT, cursive; font-size: 13px; color: #ec4899;">C. Fachkha</div><div style="font-size: 8px; margin-top: 2px;">INSTRUCTOR</div></div>' +
+        '</div>' +
+      '</div>'
+    );
+    
+    await sleep(1200);
+    blank();
+    
+    instantLine('📊 FINAL STATS:', 'info');
+    await typeLine('   Total XP:        ' + state.xp + ' / ' + objectives.reduce(function(s,o){return s+o.xp;}, 0) + ' (perfect)', 'system', 8);
+    await typeLine('   Phases cleared:  4 / 4', 'system', 8);
+    await typeLine('   Vulnerabilities: 8 discovered, 1 exploited', 'system', 8);
+    await typeLine('   Defenses:        4 deployed (IDS, MQTT auth, UFW, Node-RED auth)', 'system', 8);
+    await typeLine('   Final Grade:     ' + gradeEl.textContent, 'success', 12);
+    blank();
+    await sleep(800);
+    
+    // ═══ THE DRAMATIC FAREWELL — from Hadia ═══
+    instantLine('═══════════════════════════════════════════════════', 'hadia');
+    await typeLine('▼ HADIA TURNS TO FACE DR. FACHKHA', 'hadia', 25);
+    instantLine('═══════════════════════════════════════════════════', 'hadia');
+    blank();
+    await sleep(800);
+    
+    await typeLine('Hadia: "And... that is the end of my presentation, Dr. Fachkha."', 'hadia', 30);
+    await sleep(900);
+    blank();
+    await typeLine('       "Before I close this terminal, I want to say something."', 'hadia', 28);
+    await sleep(700);
+    blank();
+    await typeLine('       "When I signed up for ITSS 451, I genuinely thought I was in over my head."', 'hadia', 22);
+    await typeLine('       "The first time you typed nmap into a terminal in week one,"', 'hadia', 22);
+    await typeLine('       "I had no idea what was happening."', 'hadia', 22);
+    blank();
+    await sleep(800);
+    await typeLine('       "But you taught us patiently. You let us break things."', 'hadia', 25);
+    await typeLine('       "You let us fix them. You answered the same question five different ways"', 'hadia', 25);
+    await typeLine('       "until it finally clicked."', 'hadia', 25);
+    blank();
+    await sleep(900);
+    await typeLine('       "This semester was, hands down, the best class I have taken."', 'hadia', 30);
+    blank();
+    await sleep(1000);
+    
+    appendHTML(
+      '<div style="border-left: 3px solid #ec4899; padding: 12px 16px; margin: 12px 0; background: rgba(236, 72, 153, 0.05); font-style: italic; color: #fbcfe8;">' +
+        '<div style="color: #ec4899; font-weight: bold; margin-bottom: 8px; font-style: normal;">📜 A note from Hadia:</div>' +
+        '<div style="line-height: 1.7;">' +
+          'Dear Dr. Fachkha,<br><br>' +
+          'Thank you for one of the best semesters I have ever had. Every lecture felt like a new world opening up — packets, protocols, vulnerabilities, defenses. You made cybersecurity feel less like a subject and more like a craft.<br><br>' +
+          'I came in afraid of the terminal. I am leaving running Metasploit at 2 AM for fun.<br><br>' +
+          'Whatever I become next — analyst, engineer, researcher — I will carry your lessons with me.<br><br>' +
+          'With gratitude,<br>' +
+          '<span style="font-family: Brush Script MT, cursive; font-size: 16px; color: #ec4899; font-style: normal;">Hadia ✦</span>' +
+        '</div>' +
+      '</div>'
+    );
+    
+    await sleep(1500);
+    await typeLine('       "I am going to miss this class. I am going to miss this terminal."', 'hadia', 30);
+    await sleep(700);
+    await typeLine('       "And honestly... I am going to miss your lectures most of all."', 'hadia', 30);
+    blank();
+    await sleep(1000);
+    await typeLine('       "Thank you, Dr. Fachkha. For everything. 🥺"', 'hadia', 50);
+    await typeLine('       "Goodbye, semester. It was the best one yet."', 'hadia', 45);
+    blank();
+    await sleep(1500);
+    
+    await typeLine('▶ Hadia closes her laptop.', 'dim', 25);
+    await sleep(600);
+    await typeLine('▶ Connection to ITSS 451 server closed.', 'dim', 25);
+    await sleep(600);
+    await typeLine('▶ Spring 2026 semester: COMPLETE.', 'dim', 25);
+    blank();
+    await sleep(1000);
+    
+    appendHTML(
+      '<div style="text-align: center; padding: 30px 10px; margin: 12px 0; border-top: 1px solid #374151; border-bottom: 1px solid #374151;">' +
+        '<div style="font-size: 36px; margin-bottom: 12px;">🥺</div>' +
+        '<div style="color: #ec4899; font-size: 14px; letter-spacing: 3px; margin-bottom: 8px;">— FIN —</div>' +
+        '<div style="color: #9ca3af; font-style: italic; font-size: 11px; line-height: 1.8;">' +
+          '"The best teachers are those who show you where to look,<br>' +
+          'but do not tell you what to see."<br>' +
+          '<span style="font-size: 9px; color: #6b7280;">— Alexandra K. Trenfor</span>' +
+        '</div>' +
+        '<div style="margin-top: 16px; color: #6b7280; font-size: 10px;">' +
+          'Thank you for an unforgettable semester, Dr. Fachkha. 💚' +
+        '</div>' +
+        '<div style="margin-top: 14px; color: #4b5563; font-size: 9px; letter-spacing: 2px;">' +
+          '━━━ A Hadia Rahmani Production · Spring 2026 ━━━' +
+        '</div>' +
+      '</div>'
+    );
+    
+    await sleep(2000);
+    blank();
+    instantLine('💡 Try typing: "credits"  ·  "letter"  ·  "easter-egg"  ·  "restart"', 'dim');
+    
+    notesEl.innerHTML = '<strong>Closing slide:</strong> "Thank you, Dr. Fachkha, for an incredible semester. The biggest takeaway from this project is that most attacks succeed because of insecure defaults — not sophisticated zero-days. Authentication, firewalls, IDS, and patching together would have prevented every attack today. Any questions?"';
+  }
+  
+  const banner = '\n  ██╗████████╗███████╗███████╗    ██╗  ██╗███████╗ ██╗\n  ██║╚══██╔══╝██╔════╝██╔════╝    ██║  ██║██╔════╝███║\n  ██║   ██║   ███████╗███████╗    ███████║███████╗╚██║\n  ██║   ██║   ╚════██║╚════██║    ╚════██║╚════██║ ██║\n  ██║   ██║   ███████║███████║         ██║███████║ ██║\n  ╚═╝   ╚═╝   ╚══════╝╚══════╝         ╚═╝╚══════╝ ╚═╝\n                  T H E   L A B   //   v2026\n';
+  
+  async function intro() {
+    state.busy = true;
+    instantLine(banner, 'banner');
+    await sleep(300);
+    await typeLine('  Spring 2026 // Final Exam Presentation', 'dim', 15);
+    blank();
+    await sleep(400);
+    
+    // Hadia greets Dr. Fachkha
+    await typeLine('Hadia: "Welcome, Dr. Fachkha! Thank you so much for being here."', 'welcome', 20);
+    await sleep(500);
+    await typeLine('       "Honestly, this has been one of the best classes I have taken —"', 'hadia', 18);
+    await typeLine('       "your lectures made every concept click, and the way you push us to actually"', 'hadia', 18);
+    await typeLine('       "BREAK things and then secure them is something I will remember forever."', 'hadia', 18);
+    blank();
+    await sleep(500);
+    await typeLine('       "So today, instead of a regular slide deck, I built this — a live walkthrough"', 'hadia', 18);
+    await typeLine('       "of my entire final project, right in the terminal."', 'hadia', 18);
+    await typeLine('       "Hope you enjoy it. Let me set the scene..."', 'hadia', 18);
+    blank();
+    await sleep(700);
+    
+    await typeLine('▶ Booting Kali Linux VM...', 'info', 12);
+    await sleep(300);
+    await typeLine('▶ Network adapter: vboxnet0 — host-only', 'info', 8);
+    await typeLine('▶ Local IP: 192.168.56.104 (attacker)', 'info', 8);
+    await typeLine('▶ Target IP: 192.168.56.101 (Metasploitable 2)', 'info', 8);
+    blank();
+    await sleep(500);
+    
+    await typeLine('Hadia: "Okay — two virtual machines on an isolated host-only network."', 'hadia', 18);
+    await typeLine('       "No external internet. Completely safe and legal lab environment."', 'hadia', 18);
+    await typeLine('       "Let me start with what every pentest starts with — reconnaissance."', 'hadia', 18);
+    blank();
+    instantLine('▼ PHASE 1: RECONNAISSANCE — find what is running on the target.', 'success');
+    instantLine('  Type "help" for commands. Watch the sidebar for objectives + my speaker notes. →', 'dim');
+    blank();
+    state.busy = false;
+    updateObjectives();
+    input.focus();
+  }
+  
+  async function cmdHelp() {
+    blank();
+    instantLine('═══ AVAILABLE COMMANDS ═══', 'success');
+    if (state.inMsf) {
+      instantLine('  use <module>          — select an exploit module', 'system');
+      instantLine('  set RHOSTS <ip>       — set remote target', 'system');
+      instantLine('  run / exploit         — launch the exploit', 'system');
+      instantLine('  exit                  — leave Metasploit', 'system');
+    } else if (state.inShell) {
+      instantLine('  whoami / id           — show current user', 'system');
+      instantLine('  uname -a              — show kernel info', 'system');
+      instantLine('  cat /etc/shadow       — read password hashes', 'system');
+      instantLine('  exit                  — close the shell', 'system');
+    } else {
+      instantLine('  RECON:', 'info');
+      instantLine('    ping <ip>           — test connectivity', 'system');
+      instantLine('    sudo netdiscover    — discover live hosts', 'system');
+      instantLine('    sudo nmap ...       — port/service/vuln scan', 'system');
+      instantLine('  EXPLOIT:', 'info');
+      instantLine('    msfconsole          — launch Metasploit', 'system');
+      instantLine('  IoT:', 'info');
+      instantLine('    mosquitto_sub ...   — subscribe to MQTT topics', 'system');
+      instantLine('    mosquitto_pub ...   — publish MQTT messages', 'system');
+      instantLine('    open-nodered        — open Node-RED dashboard', 'system');
+      instantLine('  DEFENSE:', 'info');
+      instantLine('    sudo suricata ...   — start IDS', 'system');
+      instantLine('    sudo mosquitto_passwd ...  — add MQTT user', 'system');
+      instantLine('    sudo ufw enable / deny <port>', 'system');
+      instantLine('    nodered-secure      — enable Node-RED auth', 'system');
+      instantLine('  UTIL:', 'info');
+      instantLine('    clear / hint / status / restart', 'system');
+    }
+    blank();
+  }
+  
+  async function cmdPing(args) {
+    const ip = args[0];
+    if (!ip) { instantLine('Usage: ping <ip> [-c <count>]', 'error'); return; }
+    if (ip !== '192.168.56.101') {
+      await typeLine('PING ' + ip + ': 100% packet loss', 'error', 5);
+      instantLine('Hint: target is 192.168.56.101', 'dim');
+      return;
+    }
+    state.busy = true;
+    await typeLine('PING 192.168.56.101 (192.168.56.101) 56(84) bytes of data.', 'system', 5);
+    for (let i = 1; i <= 4; i++) {
+      await sleep(180);
+      const t = (10 + Math.random() * 15).toFixed(1);
+      await typeLine('64 bytes from 192.168.56.101: icmp_seq=' + i + ' ttl=64 time=' + t + ' ms', 'system', 3);
+    }
+    blank();
+    instantLine('--- 192.168.56.101 ping statistics ---', 'system');
+    instantLine('4 packets transmitted, 4 received, 0% packet loss, time 3016ms', 'success');
+    blank();
+    complete('ping');
+    state.busy = false;
+  }
+  
+  async function cmdNetdiscover() {
+    state.busy = true;
+    await typeLine('Currently scanning: 192.168.56.0/16   |   Screen View: Unique Hosts', 'system', 5);
+    await sleep(600);
+    blank();
+    instantLine('  IP              At MAC Address      Count  Vendor', 'info');
+    instantLine('  ───────────────────────────────────────────────────────', 'dim');
+    await sleep(200);
+    await typeLine('  192.168.56.1    0a:00:27:00:00:05    1     Unknown vendor', 'system', 4);
+    await sleep(200);
+    await typeLine('  192.168.56.100  08:00:27:9d:71:f1    2     PCS Systemtechnik GmbH', 'system', 4);
+    await sleep(200);
+    await typeLine('  192.168.56.101  08:00:27:c5:24:a0    2     PCS Systemtechnik GmbH ← target', 'success', 4);
+    blank();
+    complete('netdiscover');
+    state.busy = false;
+  }
+  
+  async function cmdNmap(args) {
+    const isVuln = args.join(' ').includes('--script vuln');
+    const isService = args.join(' ').includes('-sV') || args.join(' ').includes('-sC');
+    const target = args.find(function(a) { return a.includes('192.168'); });
+    if (!target) { instantLine('Usage: sudo nmap [options] 192.168.56.101', 'error'); return; }
+    
+    state.busy = true;
+    await typeLine('Starting Nmap 7.95 ( https://nmap.org ) at 2026-05-08', 'system', 4);
+    await typeLine('Nmap scan report for 192.168.56.101', 'system', 4);
+    await typeLine('Host is up (0.050s latency).', 'system', 4);
+    await sleep(400);
+    
+    if (isVuln) {
+      await typeLine('Running NSE vuln scripts...', 'info', 8);
+      await sleep(800);
+      blank();
+      instantLine('PORT     STATE SERVICE', 'info');
+      instantLine('21/tcp   open  ftp', 'system');
+      instantLine('| vsftpd-2.3.4-backdoor: VULNERABLE (CVE-2011-2523)', 'attack');
+      blank();
+      instantLine('445/tcp  open  microsoft-ds', 'system');
+      instantLine('| samba-vuln-usermap-script: VULNERABLE (CVE-2007-2447)', 'attack');
+      blank();
+      instantLine('| ssl-poodle: VULNERABLE (CVE-2014-3566)', 'attack');
+      blank();
+      instantLine('Nmap done: 1 IP scanned in 142.83 seconds', 'success');
+      blank();
+      complete('vuln');
+    } else if (isService) {
+      await typeLine('Scanning... port discovery... service detection...', 'info', 6);
+      await sleep(700);
+      blank();
+      instantLine('PORT     STATE SERVICE     VERSION', 'info');
+      const ports = [
+        ['21/tcp   open  ftp         ', 'vsftpd 2.3.4'],
+        ['22/tcp   open  ssh         ', 'OpenSSH 4.7p1 Debian 8ubuntu1'],
+        ['23/tcp   open  telnet      ', 'Linux telnetd'],
+        ['80/tcp   open  http        ', 'Apache httpd 2.2.8 ((Ubuntu) DAV/2)'],
+        ['139/tcp  open  netbios-ssn ', 'Samba smbd 3.X — 4.X (workgroup: WORKGROUP)'],
+        ['445/tcp  open  netbios-ssn ', 'Samba smbd 3.0.20-Debian'],
+        ['1880/tcp open  http        ', 'Node-RED (no auth)'],
+        ['1883/tcp open  mqtt        ', 'Mosquitto MQTT (anonymous allowed)'],
+        ['3306/tcp open  mysql       ', 'MySQL 5.0.51a-3ubuntu5'],
+        ['5900/tcp open  vnc         ', 'VNC (protocol 3.3)']
+      ];
+      for (const p of ports) {
+        await typeLine(p[0] + p[1], 'system', 2);
+        await sleep(60);
+      }
+      blank();
+      instantLine('Nmap done: 1 IP scanned in 18.32 seconds', 'success');
+      blank();
+      complete('nmap');
+    } else {
+      instantLine('Use -sV -sC -O for service scan, or --script vuln for vulnerability scan.', 'warning');
+    }
+    state.busy = false;
+  }
+  
+  async function cmdMsfconsole() {
+    if (state.phase < 2) { instantLine('Finish reconnaissance first.', 'warning'); return; }
+    state.busy = true;
+    blank();
+    instantLine('       =[ metasploit v6.4.04-dev                          ]', 'attack');
+    instantLine('+ -- --=[ 2,547 exploits - 1,309 auxiliary - 1,083 payloads ]', 'attack');
+    blank();
+    await sleep(400);
+    state.inMsf = true;
+    promptText.textContent = 'msf6 >';
+    complete('msfconsole');
+    state.busy = false;
+  }
+  
+  async function msfHandle(cmd, args) {
+    if (cmd === 'exit' || cmd === 'quit') {
+      state.inMsf = false;
+      promptText.textContent = 'had@vbox:~$';
+      instantLine('[*] Exiting Metasploit...', 'info');
+      return;
+    }
+    if (cmd === 'use') {
+      let mod = args[0] ? args[0].replace(/[,;]+$/, '') : '';
+      if (!mod) { instantLine('Usage: use <module>', 'error'); return; }
+      if (mod.includes('usermap_script') || mod.includes('samba')) {
+        state.msfModule = 'exploit/multi/samba/usermap_script';
+        promptText.textContent = 'msf6 exploit(usermap_script) >';
+        instantLine('[*] No payload configured, defaulting to cmd/unix/reverse_netcat', 'info');
+        instantLine('[+] Module loaded: ' + state.msfModule, 'success');
+      } else {
+        instantLine('[!] Module not found. Try: use exploit/multi/samba/usermap_script', 'error');
+      }
+      return;
+    }
+    if (cmd === 'set') {
+      const opt = args[0] ? args[0].toUpperCase() : '';
+      const val = args.slice(1).join(' ').replace(/[,;]+$/, '');
+      if (!state.msfModule) {
+        instantLine('[!] No module selected. First run: use exploit/multi/samba/usermap_script', 'error');
+        return;
+      }
+      if (opt === 'RHOSTS' || opt === 'RHOST') {
+        state.msfRhost = val;
+        instantLine('RHOSTS => ' + val, 'success');
+      } else {
+        instantLine(opt + ' => ' + val, 'system');
+      }
+      return;
+    }
+    if (cmd === 'show' && args[0] === 'options') {
+      if (!state.msfModule) { instantLine('[!] No module selected.', 'error'); return; }
+      instantLine('Module options (exploit/multi/samba/usermap_script):', 'info');
+      blank();
+      instantLine('   Name    Current Setting       Required  Description', 'system');
+      instantLine('   ----    ---------------       --------  -----------', 'dim');
+      instantLine('   RHOSTS  ' + (state.msfRhost || '(not set)') + '        yes       The target address', 'system');
+      instantLine('   RPORT   139                   yes       The target port', 'system');
+      blank();
+      return;
+    }
+    if (cmd === 'run' || cmd === 'exploit') {
+      if (!state.msfModule) {
+        instantLine('[!] No module selected. First run:', 'error');
+        instantLine('    use exploit/multi/samba/usermap_script', 'dim');
+        return;
+      }
+      if (!state.msfRhost) {
+        instantLine('[!] RHOSTS not set. First run:', 'error');
+        instantLine('    set RHOSTS 192.168.56.101', 'dim');
+        return;
+      }
+      
+      if (state.ufwBlocked.has('445') && state.ufwEnabled) {
+        state.busy = true;
+        await typeLine('[*] Started bind TCP handler against ' + state.msfRhost + ':4444', 'info', 6);
+        await sleep(400);
+        await typeLine('[*] ' + state.msfRhost + ':139 - Connection timed out (firewall blocking).', 'error', 6);
+        instantLine('[-] Exploit failed: connection refused.', 'error');
+        instantLine('✓ The UFW firewall is blocking the Samba attack vector!', 'success');
+        state.busy = false;
+        return;
+      }
+      
+      state.busy = true;
+      await typeLine('[*] Started bind TCP handler against ' + state.msfRhost + ':4444', 'info', 6);
+      await sleep(400);
+      await typeLine('[*] ' + state.msfRhost + ':139 - Sending malicious username...', 'attack', 6);
+      await sleep(500);
+      await typeLine('[*] Triggering vulnerability...', 'attack', 6);
+      await sleep(700);
+      await typeLine('[+] Command shell session 1 opened (192.168.56.104 → ' + state.msfRhost + ':4444)', 'success', 8);
+      blank();
+      state.inShell = true;
+      promptText.textContent = '# (shell)';
+      complete('exploit');
+      instantLine('💥 You are in. Root shell on the target. Try: whoami', 'toast');
+      state.busy = false;
+      return;
+    }
+    if (cmd.includes('exploit/') || cmd.includes('samba')) {
+      instantLine('[!] Did you mean: use ' + cmd + '?', 'warning');
+      return;
+    }
+    instantLine('[-] Unknown command: ' + cmd, 'error');
+    instantLine('   Type "help" for available msfconsole commands.', 'dim');
+  }
+  
+  async function shellHandle(cmd, args) {
+    if (cmd === 'exit' || cmd === 'quit') {
+      state.inShell = false;
+      state.inMsf = true;
+      promptText.textContent = 'msf6 exploit(usermap_script) >';
+      instantLine('[*] Shell session closed.', 'info');
+      return;
+    }
+    if (cmd === 'whoami') {
+      instantLine('root', 'shell');
+      complete('rootcheck');
+      return;
+    }
+    if (cmd === 'id') {
+      instantLine('uid=0(root) gid=0(root)', 'shell');
+      return;
+    }
+    if (cmd === 'uname' && args[0] === '-a') {
+      instantLine('Linux metasploitable 2.6.24-16-server #1 SMP i686 GNU/Linux', 'shell');
+      return;
+    }
+    if (cmd === 'cat' && args[0] === '/etc/shadow') {
+      instantLine('root:$1$/avpfBJ1$x0z0wSUF9Iv./DR9E9Lid.:14747:0:99999:7:::', 'shell');
+      instantLine('msfadmin:$1$XN10Zj30$bVbsR.../...:14684:0:99999:7:::', 'shell');
+      instantLine('... [redacted]', 'dim');
+      return;
+    }
+    if (cmd === 'ls') {
+      instantLine('bin   etc   home  root  tmp  usr  var', 'shell');
+      return;
+    }
+    instantLine('sh: ' + cmd + ': not found (try: whoami, id, uname -a, cat /etc/shadow, exit)', 'error');
+  }
+  
+  async function cmdMosquittoSub() {
+    if (state.phase < 3) { instantLine('Finish exploitation first.', 'warning'); return; }
+    if (state.completed.has('mqttauth')) {
+      instantLine('Connection error: Connection Refused: not authorised.', 'error');
+      instantLine('✓ MQTT authentication is now blocking unauthorized subscribes!', 'success');
+      return;
+    }
+    state.busy = true;
+    await typeLine('Connected to broker localhost:1883 (no auth required — yikes!)', 'info', 6);
+    await typeLine('Subscribed to topic: # (all topics)', 'system', 6);
+    blank();
+    
+    appendHTML(
+      '<div class="mqtt-viz">' +
+        '<div class="mqtt-viz-title">📡 LIVE MQTT TRAFFIC INTERCEPTION</div>' +
+        '<div class="mqtt-flow">' +
+          '<div class="mqtt-node">📷 IoT Camera<br><span style="font-size:9px;">192.168.56.50</span></div>' +
+          '<div class="mqtt-arrow">→</div>' +
+          '<div class="mqtt-node broker">📡 Mosquitto<br><span style="font-size:9px;">:1883</span></div>' +
+          '<div class="mqtt-arrow">→</div>' +
+          '<div class="mqtt-node attacker">💀 ATTACKER<br><span style="font-size:9px;">(you)</span></div>' +
+        '</div>' +
+        '<div id="mqtt-packets" style="margin-top: 10px;"></div>' +
+      '</div>'
+    );
+    
+    const packetContainer = document.getElementById('mqtt-packets');
+    const packets = [
+      { topic: 'iot/sensor/temp', msg: '22.5°C', danger: false },
+      { topic: 'iot/sensor/humidity', msg: '48%', danger: false },
+      { topic: 'iot/door/lock', msg: 'locked', danger: false },
+      { topic: 'iot/camera/feed', msg: 'camera=ON location=Server-Room user=admin password=admin123', danger: true },
+      { topic: 'iot/light/status', msg: 'on=true brightness=80', danger: false },
+      { topic: 'iot/alarm/code', msg: 'pin=4729 status=disarmed', danger: true }
+    ];
+    
+    for (const p of packets) {
+      await sleep(450);
+      const div = document.createElement('div');
+      div.className = 'mqtt-packet';
+      div.innerHTML = '<strong>' + p.topic + '</strong> ' + p.msg + (p.danger ? ' <span style="color:#ef4444;font-weight:bold;">⚠ SENSITIVE</span>' : '');
+      if (!p.danger) div.style.borderLeftColor = '#4ade80';
+      packetContainer.appendChild(div);
+      scrollDown();
+    }
+    
+    await sleep(400);
+    blank();
+    instantLine('⚠ Plaintext credentials and PINs visible in real-time!', 'warning');
+    blank();
+    complete('mqttsub');
+    state.busy = false;
+  }
+  
+  async function cmdMosquittoPub() {
+    if (state.phase < 3) { instantLine('Finish exploitation first.', 'warning'); return; }
+    if (state.completed.has('mqttauth')) {
+      instantLine('Connection error: Connection Refused: not authorised.', 'error');
+      instantLine('✓ MQTT authentication is now blocking unauthorized publishes!', 'success');
+      return;
+    }
+    state.busy = true;
+    await typeLine('Connecting to broker localhost:1883...', 'info', 5);
+    await sleep(300);
+    await typeLine('Publishing to topic iot/camera/feed...', 'attack', 5);
+    
+    appendHTML(
+      '<div class="mqtt-viz">' +
+        '<div class="mqtt-viz-title">💀 MALICIOUS COMMAND INJECTION</div>' +
+        '<div class="mqtt-flow">' +
+          '<div class="mqtt-node attacker">💀 ATTACKER<br><span style="font-size:9px;">(you)</span></div>' +
+          '<div class="mqtt-arrow">→</div>' +
+          '<div class="mqtt-node broker">📡 Mosquitto<br><span style="font-size:9px;">:1883</span></div>' +
+          '<div class="mqtt-arrow">→</div>' +
+          '<div class="mqtt-node">📷 IoT Camera<br><span style="font-size:9px;">(target)</span></div>' +
+        '</div>' +
+        '<div class="mqtt-packet" style="margin-top:10px;"><strong>iot/camera/feed</strong> ATTACKER:disable_auth=true shutdown=1<span style="color:#ef4444;font-weight:bold;"> ⚠ INJECTED</span></div>' +
+      '</div>'
+    );
+    
+    await sleep(500);
+    await typeLine('[+] Message delivered. Target IoT device received fake command.', 'success', 6);
+    blank();
+    instantLine('💀 Without authentication, anyone can hijack IoT devices.', 'attack');
+    blank();
+    complete('mqttpub');
+    state.busy = false;
+  }
+  
+  async function cmdOpenNodeRed() {
+    if (state.phase < 3) { instantLine('Finish exploitation first.', 'warning'); return; }
+    state.busy = true;
+    await typeLine('Opening browser → http://localhost:1880', 'info', 5);
+    await sleep(400);
+    
+    if (state.nodeRedAuthEnabled) {
+      appendHTML(
+        '<div class="nodered-frame">' +
+          '<div class="nodered-header"><span>🔴 Node-RED Editor</span><span style="font-size:10px;">localhost:1880</span></div>' +
+          '<div class="nodered-locked">' +
+            '🔒 <strong>Authentication Required</strong><br>' +
+            '<input style="margin-top:6px;padding:4px;font-size:11px;" placeholder="Username" disabled>' +
+            '<input style="padding:4px;font-size:11px;" type="password" placeholder="Password" disabled>' +
+            '<br><button style="margin-top:6px;padding:4px 12px;background:#dc2626;color:white;border:none;border-radius:3px;font-size:11px;">Login</button>' +
+          '</div>' +
+        '</div>'
+      );
+      await sleep(300);
+      instantLine('✓ Node-RED dashboard is now protected by authentication.', 'success');
+    } else {
+      appendHTML(
+        '<div class="nodered-frame">' +
+          '<div class="nodered-header"><span>🔴 Node-RED Editor — Flow 1</span><span style="font-size:10px;">localhost:1880</span></div>' +
+          '<div class="nodered-flow">' +
+            '<div class="node-block input">⏰ timestamp</div>' +
+            '<span class="node-arrow">→</span>' +
+            '<div class="node-block func">⚙️ id</div>' +
+            '<span class="node-arrow">→</span>' +
+            '<div class="node-block debug">🐞 debug 1</div>' +
+          '</div>' +
+          '<div style="margin-top:8px;padding:8px;background:#1f2937;color:#bbf7d0;font-size:10px;font-family:monospace;border-radius:3px;">' +
+            '[debug] uid=1000(had) gid=1000(had) groups=1000(had),4(adm),20(dialout),24(cdrom),25(floppy),27(sudo),29(audio)...' +
+          '</div>' +
+          '<div class="nodered-warning">⚠ <strong>NO AUTHENTICATION REQUIRED!</strong> Editor opened directly. Anyone on the network can modify these flows.</div>' +
+        '</div>'
+      );
+      await sleep(400);
+      instantLine('💀 The Node-RED editor loaded WITHOUT a login prompt.', 'attack');
+      blank();
+      complete('nodered');
+    }
+    state.busy = false;
+  }
+  
+  async function cmdNoderedSecure() {
+    if (state.phase < 4) { instantLine('Defense phase not unlocked yet.', 'warning'); return; }
+    state.busy = true;
+    await typeLine('Editing /home/had/.node-red/settings.js...', 'info', 5);
+    await sleep(300);
+    blank();
+    instantLine('  adminAuth: {', 'system');
+    instantLine('    type: "credentials",', 'system');
+    instantLine('    users: [{', 'system');
+    instantLine('      username: "admin",', 'system');
+    instantLine('      password: "$2y$08$s4YCXFXzcfkxhBKYaH68Ru...",', 'system');
+    instantLine('      permissions: "*"', 'system');
+    instantLine('    }]', 'system');
+    instantLine('  }', 'system');
+    blank();
+    await sleep(300);
+    await typeLine('Restarting Node-RED service...', 'info', 5);
+    await sleep(400);
+    state.nodeRedAuthEnabled = true;
+    instantLine('✓ Node-RED authentication enabled. Login required to access editor.', 'success');
+    instantLine('   Try: open-nodered to verify the login screen appears.', 'dim');
+    blank();
+    complete('noderedauth');
+    state.busy = false;
+  }
+  
+  async function cmdSuricata() {
+    if (state.phase < 4) { instantLine('Defense phase not unlocked yet.', 'warning'); return; }
+    state.busy = true;
+    await typeLine('[*] Loading Suricata rules from /etc/suricata/rules/...', 'info', 5);
+    await sleep(400);
+    await typeLine('[*] Loaded 32,847 rules from ET Open ruleset.', 'info', 5);
+    await typeLine('[*] Listening on interface eth0...', 'success', 5);
+    blank();
+    await sleep(500);
+    instantLine('▶ Simulating a re-run of Nmap scan to test detection...', 'dim');
+    await sleep(600);
+    blank();
+    instantLine('[**] [1:2008005:1] ET SCAN Nmap NSE Heartbleed Detection', 'warning');
+    instantLine('[**] [1:2003068:6] ET SCAN Potential SSH Scan', 'warning');
+    instantLine('[**] [1:2024364:5] ET SCAN Possible Nmap User-Agent Observed', 'warning');
+    instantLine('[**] [1:2009582:4] ET SCAN NMAP -sS window 1024', 'warning');
+    blank();
+    instantLine('✓ IDS deployed. Reconnaissance attempts now generate alerts in real-time.', 'success');
+    blank();
+    complete('suricata');
+    state.busy = false;
+  }
+  
+  async function cmdMqttPasswd() {
+    if (state.phase < 4) { instantLine('Defense phase not unlocked yet.', 'warning'); return; }
+    state.busy = true;
+    await typeLine('Password: ********', 'system', 8);
+    await typeLine('Reenter password: ********', 'system', 8);
+    await sleep(300);
+    instantLine('User "student" added to /etc/mosquitto/passwd', 'success');
+    await sleep(200);
+    await typeLine('Updating /etc/mosquitto/conf.d/auth.conf...', 'info', 5);
+    await typeLine('  allow_anonymous false', 'system', 4);
+    await typeLine('  password_file /etc/mosquitto/passwd', 'system', 4);
+    await typeLine('Restarting mosquitto.service...', 'info', 5);
+    await sleep(400);
+    instantLine('✓ MQTT broker now requires authentication. Anonymous access blocked.', 'success');
+    blank();
+    complete('mqttauth');
+    state.busy = false;
+  }
+  
+  async function cmdUfw(args) {
+    if (state.phase < 4) { instantLine('Defense phase not unlocked yet.', 'warning'); return; }
+    const sub = args[0];
+    if (sub === 'enable') {
+      await typeLine('Firewall is active and enabled on system startup', 'success', 5);
+      state.ufwEnabled = true;
+      return;
+    }
+    if (sub === 'deny') {
+      const portArgs = args.slice(1);
+      const ports = portArgs.filter(function(a) { return /^\d+$/.test(a); });
+      if (ports.length === 0) {
+        instantLine('Usage: sudo ufw deny <port> [<port> ...]', 'error');
+        return;
+      }
+      for (const port of ports) {
+        await typeLine('Rule added', 'success', 5);
+        await typeLine('Rule added (v6)', 'success', 5);
+        state.ufwBlocked.add(port);
+      }
+      if (state.ufwBlocked.has('445') && state.ufwBlocked.has('1883')) {
+        complete('ufw');
+        blank();
+        instantLine('✓ Both attack vectors (SMB :445, MQTT :1883) blocked at firewall.', 'success');
+      } else {
+        const remaining = [];
+        if (!state.ufwBlocked.has('445')) remaining.push('445');
+        if (!state.ufwBlocked.has('1883')) remaining.push('1883');
+        if (remaining.length) instantLine('💡 Still need to block: ' + remaining.join(', '), 'info');
+      }
+      return;
+    }
+    if (sub === 'status') {
+      instantLine('Status: ' + (state.ufwEnabled ? 'active' : 'inactive'), 'success');
+      blank();
+      instantLine('     To              Action      From', 'info');
+      [...state.ufwBlocked].forEach(function(p, i) {
+        instantLine('[' + (i+1) + '] ' + p + '             DENY IN     Anywhere', 'system');
+      });
+      return;
+    }
+    instantLine('Usage: sudo ufw [enable|deny <port>|status]', 'error');
+  }
+  
+  async function cmdCredits() {
+    blank();
+    instantLine('═══════════════════════════════════════════════════', 'info');
+    instantLine('              ITSS 451: THE LAB — CREDITS', 'info');
+    instantLine('═══════════════════════════════════════════════════', 'info');
+    blank();
+    await typeLine('  Starring:', 'dim', 5);
+    await typeLine('    HADIA RAHMANI ........... as the Hacker', 'system', 5);
+    await typeLine('    DR. CLAUDE FACHKHA ...... as the Mentor', 'hadia', 5);
+    await typeLine('    METASPLOITABLE 2 ........ as the Target', 'attack', 5);
+    await typeLine('    KALI LINUX .............. as the Weapon', 'success', 5);
+    blank();
+    await typeLine('  Special Thanks:', 'dim', 5);
+    await typeLine('    Every late-night msfconsole session', 'system', 4);
+    await typeLine('    The /etc/shadow file for cooperating', 'system', 4);
+    await typeLine('    Wireshark, for showing us the truth', 'system', 4);
+    await typeLine('    Coffee. So much coffee. ☕', 'system', 4);
+    blank();
+    instantLine('═══════════════════════════════════════════════════', 'info');
+    blank();
+  }
+  
+  async function cmdLetter() {
+    blank();
+    appendHTML(
+      '<div style="border: 1px solid #ec4899; padding: 16px 20px; margin: 12px 0; background: rgba(236, 72, 153, 0.05); font-style: italic; color: #fbcfe8; line-height: 1.8;">' +
+        '<div style="color: #ec4899; font-weight: bold; margin-bottom: 10px; font-style: normal; font-size: 13px;">📜 Letter to Dr. Fachkha</div>' +
+        '<div>Dear Dr. Fachkha,<br><br>When the semester started, I was not sure cybersecurity was for me. I worried I was not technical enough.<br><br>But you taught us patiently. You let us break things. You let us fix them.<br><br>The thing I will remember most is that you treated us like future colleagues, not just students.<br><br>Until then,<br><span style="font-family: Brush Script MT, cursive; font-size: 18px; color: #ec4899; font-style: normal;">Hadia ✦</span></div>' +
+      '</div>'
+    );
+    blank();
+  }
+  
+  async function cmdEasterEgg() {
+    blank();
+    await typeLine('🎮 You found it!', 'success', 30);
+    blank();
+    instantLine('     ▲ ▲', 'success');
+    instantLine('     ▼ ▼', 'success');
+    instantLine('     ◄ ► ◄ ►', 'success');
+    instantLine('     B A', 'success');
+    blank();
+    await typeLine('🎁 Achievement: "Curious Mind" — You explored beyond the path.', 'toast', 15);
+    blank();
+  }
+  
+  function cmdClear() { terminal.innerHTML = ''; }
+  
+  function cmdHint() {
+    const next = objectives.find(function(o) { return !state.completed.has(o.id) && o.phase === state.phase; });
+    if (!next) { instantLine('No pending objectives in this phase.', 'success'); return; }
+    instantLine('💡 Next: ' + next.label, 'info');
+    instantLine('   ' + next.hint, 'dim');
+  }
+  
+  function cmdStatus() {
+    blank();
+    instantLine('═══ MISSION STATUS ═══', 'success');
+    instantLine('  Phase:        ' + state.phase + ' of 4 (' + phaseNames[state.phase] + ')', 'system');
+    instantLine('  XP earned:    ' + state.xp, 'system');
+    instantLine('  Completed:    ' + state.completed.size + ' / ' + objectives.length, 'system');
+    instantLine('  Current grade: ' + gradeEl.textContent, 'system');
+    blank();
+  }
+  
+  async function processCommand(raw) {
+    const trimmed = raw.trim();
+    if (!trimmed) return;
+    instantLine(promptText.textContent + ' ' + trimmed, 'user');
+    if (trimmed === 'restart') { location.reload(); return; }
+    
+    let parts = trimmed.split(/\s+/);
+    if (parts[0] === 'sudo') parts = parts.slice(1);
+    const cmd = parts[0];
+    const args = parts.slice(1);
+    
+    if (state.inShell) return shellHandle(cmd, args);
+    if (state.inMsf) return msfHandle(cmd, args);
+    
+    switch (cmd) {
+      case 'help': case '?': return cmdHelp();
+      case 'clear': case 'cls': return cmdClear();
+      case 'hint': return cmdHint();
+      case 'status': return cmdStatus();
+      case 'ping': return cmdPing(args);
+      case 'netdiscover': return cmdNetdiscover();
+      case 'nmap': return cmdNmap(args);
+      case 'msfconsole': return cmdMsfconsole();
+      case 'mosquitto_sub': return cmdMosquittoSub();
+      case 'mosquitto_pub': return cmdMosquittoPub();
+      case 'open-nodered': case 'firefox': case 'browse': return cmdOpenNodeRed();
+      case 'nodered-secure': return cmdNoderedSecure();
+      case 'suricata': return cmdSuricata();
+      case 'mosquitto_passwd': return cmdMqttPasswd();
+      case 'ufw': return cmdUfw(args);
+      case 'whoami': instantLine('had', 'system'); return;
+      case 'pwd': instantLine('/home/had', 'system'); return;
+      case 'ls': instantLine('Desktop  Documents  Downloads  exam_notes.txt  lab_report.pdf', 'system'); return;
+      case 'credits': return cmdCredits();
+      case 'letter': return cmdLetter();
+      case 'easter-egg': case 'egg': return cmdEasterEgg();
+      case 'thanks':
+        instantLine('💚 You are welcome. Now go change the world.', 'hadia');
+        return;
+      default:
+        instantLine('zsh: command not found: ' + cmd, 'error');
+        instantLine('Type "help" to see available commands.', 'dim');
+    }
+  }
+  
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !state.busy) {
+      const v = input.value;
+      input.value = '';
+      processCommand(v);
+    }
+  });
+  
+  // Konami code
+  const konami = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+  let konamiIndex = 0;
+  document.addEventListener('keydown', function(e) {
+    const expected = konami[konamiIndex];
+    if (e.key === expected || e.key.toLowerCase() === expected) {
+      konamiIndex++;
+      if (konamiIndex === konami.length) {
+        konamiIndex = 0;
+        cmdEasterEgg();
+      }
+    } else {
+      konamiIndex = 0;
+    }
+  });
+  
+  document.addEventListener('click', function() { input.focus(); });
+  
+  intro();
+</script>
+</body>
+</html>
