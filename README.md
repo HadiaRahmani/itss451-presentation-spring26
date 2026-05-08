@@ -36,5 +36,5 @@ The goal of this project is to show how insecure defaults and weak configuration
 ## Author
 
 Hadia Rahmani | 
-ITSS 451 - Spring 2026
+ITSS 451 - Spring 2026 | 
 University of Dubai
